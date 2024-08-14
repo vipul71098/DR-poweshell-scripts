@@ -6,6 +6,7 @@ param (
     [bool]$UseElasticPool = $false
 )
 
+# Function to perform failover with Elastic Pool
 function Failover-WithElasticPool {
     param (
         [string]$ResourceGroupName,
@@ -13,21 +14,17 @@ function Failover-WithElasticPool {
         [string]$DatabaseName
     )
 
-    Write-Host "Starting Failover-WithElasticPool function..."
-    Write-Host "Authenticating with Azure..."
-
-    if (-not (Get-AzContext)) {
-        $tenantId = $env:AZURE_TENANT_ID
-        $clientId = $env:AZURE_CLIENT_ID
-        $clientSecret = $env:AZURE_CLIENT_SECRET
-
-        $secureClientSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
-        $psCredential = New-Object Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmServicePrincipalCredential($clientId, $secureClientSecret, $tenantId)
-        
-        Connect-AzAccount -ServicePrincipal -Credential $psCredential -Tenant $tenantId
-        Write-Host "Authenticated successfully."
+    # Ensure Azure CLI is authenticated
+    if (-not (az account show)) {
+        Write-Host "Azure CLI not authenticated. Logging in..."
+        az login --service-principal -u $env:AZURE_CLIENT_ID -p $env:AZURE_CLIENT_SECRET --tenant $env:AZURE_TENANT_ID
     }
 
+    # Set the subscription context
+    $subscriptionId = (az account show --query id --output tsv)
+    az account set --subscription $subscriptionId
+
+    # Parameters for the failover
     $parameters = @{
         ResourceGroupName = $ResourceGroupName
         ServerName = $ServerName
@@ -35,18 +32,22 @@ function Failover-WithElasticPool {
         PartnerResourceGroupName = $ResourceGroupName
     }
 
+    # Initiate the failover
     Write-Host "Initiating failover for database $DatabaseName from server $ServerName..."
     try {
-        Set-AzSqlDatabaseSecondary @parameters -Failover -Verbose
+        Set-AzSqlDatabaseSecondary @parameters -Failover
         Write-Host "Failover initiated successfully. Please wait while the failover process completes..."
     } catch {
         Write-Host "Error initiating failover: $($_.Exception.Message)"
     }
 
-    Start-Sleep -Seconds 30
+    # Wait for the failover to complete
+    Start-Sleep -Seconds 30  # Increased sleep duration to account for propagation time
+
     Write-Host "Failover process completed. Please verify the status in the Azure portal."
 }
 
+# Function to perform failover without Elastic Pool
 function Failover-WithoutElasticPool {
     param (
         [string]$ResourceGroupName,
@@ -54,36 +55,40 @@ function Failover-WithoutElasticPool {
         [string]$FailoverGroupName
     )
 
-    Write-Host "Starting Failover-WithoutElasticPool function..."
-
-    if (-not (Get-AzContext)) {
-        Write-Host "Authenticating with Azure..."
-        $tenantId = $env:AZURE_TENANT_ID
-        $clientId = $env:AZURE_CLIENT_ID
-        $clientSecret = $env:AZURE_CLIENT_SECRET
-
-        $secureClientSecret = ConvertTo-SecureString $clientSecret -AsPlainText -Force
-        $psCredential = New-Object Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmServicePrincipalCredential($clientId, $secureClientSecret, $tenantId)
-        
-        Connect-AzAccount -ServicePrincipal -Credential $psCredential -Tenant $tenantId
-        Write-Host "Authenticated successfully."
+    # Ensure Azure CLI is authenticated
+    if (-not (az account show)) {
+        Write-Host "Azure CLI not authenticated. Logging in..."
+        az login --service-principal -u $env:AZURE_CLIENT_ID -p $env:AZURE_CLIENT_SECRET --tenant $env:AZURE_TENANT_ID
     }
 
+    # Set the subscription context
+    $subscriptionId = (az account show --query id --output tsv)
+    az account set --subscription $subscriptionId
+
     try {
+        # Failover to secondary server
         Write-Host "Failing over failover group to the secondary..."
         Switch-AzSqlDatabaseFailoverGroup `
            -ResourceGroupName $ResourceGroupName `
            -ServerName $ServerName `
-           -FailoverGroupName $FailoverGroupName -Verbose -ErrorAction Stop
+           -FailoverGroupName $FailoverGroupName -ErrorAction Stop
         Write-Host "Failed failover group successfully to" $ServerName 
 
+        # Confirm the secondary server is now primary
         Write-Host "Confirming the secondary server is now primary..."
         $failoverGroup = Get-AzSqlDatabaseFailoverGroup `
            -FailoverGroupName $FailoverGroupName `
            -ResourceGroupName $ResourceGroupName `
-           -ServerName $ServerName -Verbose -ErrorAction Stop
+           -ServerName $ServerName -ErrorAction Stop
         Write-Host "The replication role of the failover group is:" $failoverGroup.ReplicationRole
     } catch {
         Write-Error "An error occurred: $_"
     }
+}
+
+# Main Script
+if ($UseElasticPool) {
+    Failover-WithElasticPool -ResourceGroupName $ResourceGroupName -ServerName $ServerName -DatabaseName $DatabaseName
+} else {
+    Failover-WithoutElasticPool -ResourceGroupName $ResourceGroupName -ServerName $ServerName -FailoverGroupName $FailoverGroupName
 }
