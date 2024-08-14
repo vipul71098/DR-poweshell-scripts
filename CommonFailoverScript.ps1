@@ -1,12 +1,9 @@
 param (
-    [switch]$useElasticPool,
-    [string]$serverName,
-    [string]$databaseName,
-    [string]$failoverGroupName,
-    [string]$resourceGroupName,
-    [string]$tenantId,
-    [string]$appId,
-    [string]$password
+    [string]$ResourceGroupName = "",
+    [string]$DatabaseName = "",
+    [string]$ServerName = "",
+    [string]$FailoverGroupName = "",
+    [bool]$UseElasticPool = $false
 )
 
 # Function to perform failover with Elastic Pool
@@ -17,11 +14,8 @@ function Failover-WithElasticPool {
         [string]$DatabaseName
     )
     
-    # Login to Azure using service principal
-    Connect-AzAccount -ServicePrincipal -Tenant $tenantId -ApplicationId $appId -Credential (New-Object System.Management.Automation.PSCredential($appId, (ConvertTo-SecureString -String $password -AsPlainText -Force)))
-
-    # Set the subscription context
-    Set-AzContext -SubscriptionId (Get-AzSubscription -Default | Select-Object -ExpandProperty Id)
+    # Login to Azure
+    Connect-AzAccount
 
     # Parameters for the failover
     $parameters = @{
@@ -54,11 +48,8 @@ function Failover-WithoutElasticPool {
         [string]$FailoverGroupName
     )
     
-    # Login to Azure using service principal
-    Connect-AzAccount -ServicePrincipal -Tenant $tenantId -ApplicationId $appId -Credential (New-Object System.Management.Automation.PSCredential($appId, (ConvertTo-SecureString -String $password -AsPlainText -Force)))
-
-    # Set the subscription context
-    Set-AzContext -SubscriptionId (Get-AzSubscription -Default | Select-Object -ExpandProperty Id)
+    # Login to Azure
+    Connect-AzAccount
 
     try {
         # Failover to secondary server
@@ -82,8 +73,8 @@ function Failover-WithoutElasticPool {
 }
 
 # Main Script
-if ($useElasticPool) {
-    Failover-WithElasticPool -ResourceGroupName $resourceGroupName -ServerName $serverName -DatabaseName $databaseName
+if ($UseElasticPool) {
+    Failover-WithElasticPool -ResourceGroupName $ResourceGroupName -ServerName $ServerName -DatabaseName $DatabaseName
 } else {
-    Failover-WithoutElasticPool -ResourceGroupName $resourceGroupName -ServerName $serverName -FailoverGroupName $failoverGroupName
+    Failover-WithoutElasticPool -ResourceGroupName $ResourceGroupName -ServerName $ServerName -FailoverGroupName $FailoverGroupName
 }
