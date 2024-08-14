@@ -22,8 +22,9 @@ function Failover-WithElasticPool {
     $credential = New-Object System.Management.Automation.PSCredential($appId, $securePassword)
     Connect-AzAccount -ServicePrincipal -Tenant $tenantId -ApplicationId $appId -Credential $credential
 
-    # Set the subscription context
-    Set-AzContext -SubscriptionId (Get-AzSubscription -Default | Select-Object -ExpandProperty Id)
+    # Get the subscription ID and set the context
+    $subscriptionId = (Get-AzContext).Subscription.Id
+    Set-AzContext -SubscriptionId $subscriptionId
 
     # Parameters for the failover
     $parameters = @{
@@ -61,8 +62,9 @@ function Failover-WithoutElasticPool {
     $credential = New-Object System.Management.Automation.PSCredential($appId, $securePassword)
     Connect-AzAccount -ServicePrincipal -Tenant $tenantId -ApplicationId $appId -Credential $credential
 
-    # Set the subscription context
-    Set-AzContext -SubscriptionId (Get-AzSubscription -Default | Select-Object -ExpandProperty Id)
+    # Get the subscription ID and set the context
+    $subscriptionId = (Get-AzContext).Subscription.Id
+    Set-AzContext -SubscriptionId $subscriptionId
 
     try {
         # Failover to secondary server
