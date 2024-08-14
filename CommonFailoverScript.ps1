@@ -14,8 +14,11 @@ function Failover-WithElasticPool {
         [string]$DatabaseName
     )
 
+    Write-Host "Starting Failover-WithElasticPool function..."
+
     # Login to Azure using Service Principal credentials
     if (-not (Get-AzContext)) {
+        Write-Host "Authenticating with Azure..."
         $tenantId = $env:AZURE_TENANT_ID
         $clientId = $env:AZURE_CLIENT_ID
         $clientSecret = $env:AZURE_CLIENT_SECRET
@@ -24,6 +27,7 @@ function Failover-WithElasticPool {
         $psCredential = New-Object Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmServicePrincipalCredential($clientId, $secureClientSecret, $tenantId)
         
         Connect-AzAccount -ServicePrincipal -Credential $psCredential -Tenant $tenantId
+        Write-Host "Authenticated successfully."
     }
 
     # Parameters for the failover
@@ -34,7 +38,6 @@ function Failover-WithElasticPool {
         PartnerResourceGroupName = $ResourceGroupName
     }
 
-    # Initiate the failover
     Write-Host "Initiating failover for database $DatabaseName from server $ServerName..."
     try {
         Set-AzSqlDatabaseSecondary @parameters -Failover
@@ -57,8 +60,11 @@ function Failover-WithoutElasticPool {
         [string]$FailoverGroupName
     )
 
+    Write-Host "Starting Failover-WithoutElasticPool function..."
+
     # Login to Azure using Service Principal credentials
     if (-not (Get-AzContext)) {
+        Write-Host "Authenticating with Azure..."
         $tenantId = $env:AZURE_TENANT_ID
         $clientId = $env:AZURE_CLIENT_ID
         $clientSecret = $env:AZURE_CLIENT_SECRET
@@ -67,10 +73,10 @@ function Failover-WithoutElasticPool {
         $psCredential = New-Object Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureRmServicePrincipalCredential($clientId, $secureClientSecret, $tenantId)
         
         Connect-AzAccount -ServicePrincipal -Credential $psCredential -Tenant $tenantId
+        Write-Host "Authenticated successfully."
     }
 
     try {
-        # Failover to secondary server
         Write-Host "Failing over failover group to the secondary..."
         Switch-AzSqlDatabaseFailoverGroup `
            -ResourceGroupName $ResourceGroupName `
@@ -78,7 +84,6 @@ function Failover-WithoutElasticPool {
            -FailoverGroupName $FailoverGroupName -ErrorAction Stop
         Write-Host "Failed failover group successfully to" $ServerName 
 
-        # Confirm the secondary server is now primary
         Write-Host "Confirming the secondary server is now primary..."
         $failoverGroup = Get-AzSqlDatabaseFailoverGroup `
            -FailoverGroupName $FailoverGroupName `
