@@ -9,6 +9,9 @@ param (
     [string]$password
 )
 
+# Login to Azure using Azure CLI with provided parameters
+az login --service-principal -u $appId -p $password --tenant $tenantId
+
 # Function to perform failover with Elastic Pool
 function Failover-WithElasticPool {
     param (
@@ -16,11 +19,6 @@ function Failover-WithElasticPool {
         [string]$ServerName,
         [string]$DatabaseName
     )
-    
-    # Login to Azure using Service Principal
-    $psCredential = New-Object Microsoft.Azure.Commands.Common.Authentication.Abstractions.ServicePrincipalToken($appId, $password, $tenantId)
-    Connect-AzAccount -ServicePrincipal -Credential $psCredential -Tenant $tenantId
-
     # Parameters for the failover
     $parameters = @{
         ResourceGroupName = $ResourceGroupName
@@ -51,11 +49,6 @@ function Failover-WithoutElasticPool {
         [string]$ServerName,
         [string]$FailoverGroupName
     )
-    
-    # Login to Azure using Service Principal
-    $psCredential = New-Object Microsoft.Azure.Commands.Common.Authentication.Abstractions.ServicePrincipalToken($appId, $password, $tenantId)
-    Connect-AzAccount -ServicePrincipal -Credential $psCredential -Tenant $tenantId
-
     try {
         # Failover to secondary server
         Write-Host "Failing over failover group to the secondary..."
