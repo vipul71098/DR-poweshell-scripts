@@ -9,9 +9,6 @@ param (
     [string]$password
 )
 
-# Login to Azure using Azure CLI with provided parameters
-az login --service-principal -u $appId -p $password --tenant $tenantId
-
 # Function to perform failover with Elastic Pool
 function Failover-WithElasticPool {
     param (
@@ -19,6 +16,20 @@ function Failover-WithElasticPool {
         [string]$ServerName,
         [string]$DatabaseName
     )
+    
+    # Login to Azure using service principal
+    $psCredential = New-Object Microsoft.Azure.Commands.Common.Authentication.Abstractions.ServicePrincipalToken(
+        [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureContext]::new(
+            $tenantId,
+            $appId,
+            $password
+        )
+    )
+    Connect-AzAccount -ServicePrincipal -Credential $psCredential -Tenant $tenantId
+
+    # Set the subscription context
+    Set-AzContext -SubscriptionId (Get-AzSubscription -Default | Select-Object -ExpandProperty Id)
+
     # Parameters for the failover
     $parameters = @{
         ResourceGroupName = $ResourceGroupName
@@ -49,6 +60,20 @@ function Failover-WithoutElasticPool {
         [string]$ServerName,
         [string]$FailoverGroupName
     )
+    
+    # Login to Azure using service principal
+    $psCredential = New-Object Microsoft.Azure.Commands.Common.Authentication.Abstractions.ServicePrincipalToken(
+        [Microsoft.Azure.Commands.Common.Authentication.Abstractions.AzureContext]::new(
+            $tenantId,
+            $appId,
+            $password
+        )
+    )
+    Connect-AzAccount -ServicePrincipal -Credential $psCredential -Tenant $tenantId
+
+    # Set the subscription context
+    Set-AzContext -SubscriptionId (Get-AzSubscription -Default | Select-Object -ExpandProperty Id)
+
     try {
         # Failover to secondary server
         Write-Host "Failing over failover group to the secondary..."
@@ -76,6 +101,7 @@ if ($useElasticPool) {
 } else {
     Failover-WithoutElasticPool -ResourceGroupName $resourceGroupName -ServerName $serverName -FailoverGroupName $failoverGroupName
 }
+
 
 # param (
 #     [switch]$useElasticPool,
