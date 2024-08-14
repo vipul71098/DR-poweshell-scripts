@@ -13,9 +13,11 @@ function Failover-WithElasticPool {
         [string]$ServerName,
         [string]$DatabaseName
     )
-    
-    # Login to Azure
-    Connect-AzAccount
+
+    # Login to Azure using Azure CLI authentication
+    if (-not (Get-AzContext)) {
+        Connect-AzAccount -Identity
+    }
 
     # Parameters for the failover
     $parameters = @{
@@ -47,9 +49,11 @@ function Failover-WithoutElasticPool {
         [string]$ServerName,
         [string]$FailoverGroupName
     )
-    
-    # Login to Azure
-    Connect-AzAccount
+
+    # Login to Azure using Azure CLI authentication
+    if (-not (Get-AzContext)) {
+        Connect-AzAccount -Identity
+    }
 
     try {
         # Failover to secondary server
@@ -78,3 +82,86 @@ if ($UseElasticPool) {
 } else {
     Failover-WithoutElasticPool -ResourceGroupName $ResourceGroupName -ServerName $ServerName -FailoverGroupName $FailoverGroupName
 }
+
+
+
+# param (
+#     [string]$ResourceGroupName = "",
+#     [string]$DatabaseName = "",
+#     [string]$ServerName = "",
+#     [string]$FailoverGroupName = "",
+#     [bool]$UseElasticPool = $false
+# )
+
+# # Function to perform failover with Elastic Pool
+# function Failover-WithElasticPool {
+#     param (
+#         [string]$ResourceGroupName,
+#         [string]$ServerName,
+#         [string]$DatabaseName
+#     )
+    
+#     # Login to Azure
+#     Connect-AzAccount
+
+#     # Parameters for the failover
+#     $parameters = @{
+#         ResourceGroupName = $ResourceGroupName
+#         ServerName = $ServerName
+#         DatabaseName = $DatabaseName
+#         PartnerResourceGroupName = $ResourceGroupName
+#     }
+
+#     # Initiate the failover
+#     Write-Host "Initiating failover for database $DatabaseName from server $ServerName..."
+#     try {
+#         Set-AzSqlDatabaseSecondary @parameters -Failover
+#         Write-Host "Failover initiated successfully. Please wait while the failover process completes..."
+#     } catch {
+#         Write-Host "Error initiating failover: $($_.Exception.Message)"
+#     }
+
+#     # Wait for the failover to complete
+#     Start-Sleep -Seconds 30  # Increased sleep duration to account for propagation time
+
+#     Write-Host "Failover process completed. Please verify the status in the Azure portal."
+# }
+
+# # Function to perform failover without Elastic Pool
+# function Failover-WithoutElasticPool {
+#     param (
+#         [string]$ResourceGroupName,
+#         [string]$ServerName,
+#         [string]$FailoverGroupName
+#     )
+    
+#     # Login to Azure
+#     Connect-AzAccount
+
+#     try {
+#         # Failover to secondary server
+#         Write-Host "Failing over failover group to the secondary..."
+#         Switch-AzSqlDatabaseFailoverGroup `
+#            -ResourceGroupName $ResourceGroupName `
+#            -ServerName $ServerName `
+#            -FailoverGroupName $FailoverGroupName -ErrorAction Stop
+#         Write-Host "Failed failover group successfully to" $ServerName 
+
+#         # Confirm the secondary server is now primary
+#         Write-Host "Confirming the secondary server is now primary..."
+#         $failoverGroup = Get-AzSqlDatabaseFailoverGroup `
+#            -FailoverGroupName $FailoverGroupName `
+#            -ResourceGroupName $ResourceGroupName `
+#            -ServerName $ServerName -ErrorAction Stop
+#         Write-Host "The replication role of the failover group is:" $failoverGroup.ReplicationRole
+#     } catch {
+#         Write-Error "An error occurred: $_"
+#     }
+# }
+
+# # Main Script
+# if ($UseElasticPool) {
+#     Failover-WithElasticPool -ResourceGroupName $ResourceGroupName -ServerName $ServerName -DatabaseName $DatabaseName
+# } else {
+#     Failover-WithoutElasticPool -ResourceGroupName $ResourceGroupName -ServerName $ServerName -FailoverGroupName $FailoverGroupName
+# }
