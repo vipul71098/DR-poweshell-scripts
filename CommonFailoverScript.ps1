@@ -88,7 +88,6 @@ function Failover-WithoutElasticPool {
 $context = Get-AzContext
 if (-not $context) {
     Write-Error "No Azure context found. Please ensure you are logged in and have set the subscription context."
-    exit 1
 }
 
 # Set Azure context if not already set
