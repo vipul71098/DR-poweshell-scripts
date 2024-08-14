@@ -85,15 +85,15 @@ function Failover-WithoutElasticPool {
     }
 }
 
-$context = Get-AzContext
-if (-not $context) {
-    Write-Error "No Azure context found. Please ensure you are logged in and have set the subscription context."
-}
+# $context = Get-AzContext
+# if (-not $context) {
+#     Write-Error "No Azure context found. Please ensure you are logged in and have set the subscription context."
+# }
 
-# Set Azure context if not already set
-if ($context.Subscription.Id -ne $env:AZURE_SUBSCRIPTION_ID) {
-    Set-AzContext -SubscriptionId $env:AZURE_SUBSCRIPTION_ID
-}
+# # Set Azure context if not already set
+# if ($context.Subscription.Id -ne $env:AZURE_SUBSCRIPTION_ID) {
+#     Set-AzContext -SubscriptionId $env:AZURE_SUBSCRIPTION_ID
+# }
 
 # Main Script
 if ($useElasticPool) {
